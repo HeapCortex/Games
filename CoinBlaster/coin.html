@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Blaster - Destroy the Falling Coins!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f0f23);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .game-ui {
+            background: rgba(31, 41, 55, 0.9);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: rgba(156, 163, 175, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .score { color: #fbbf24; }
+        .level { color: #60a5fa; }
+        .blocks { color: #34d399; }
+
+        .lives-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .life-bar {
+            width: 12px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid rgba(75, 85, 99, 1);
+        }
+
+        .life-bar.active {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .life-bar.inactive {
+            background: rgba(75, 85, 99, 1);
+        }
+
+        .game-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-pause {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-pause:hover {
+            background: #1d4ed8;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-restart {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-restart:hover {
+            background: #047857;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .game-board-container {
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        #gameCanvas {
+            border: 2px solid rgba(75, 85, 99, 1);
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(to bottom, #1f2937, #111827);
+            cursor: crosshair;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: rgba(31, 41, 55, 0.95);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal h2 {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        .modal p {
+            color: rgba(156, 163, 175, 1);
+            margin-bottom: 24px;
+        }
+
+        .final-stats {
+            background: rgba(17, 24, 39, 1);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .instructions {
+            background: rgba(31, 41, 55, 0.9);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+
+        .instructions h3 {
+            color: #fbbf24;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .instructions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .instruction-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            color: rgba(209, 213, 219, 1);
+            font-size: 14px;
+        }
+
+        .instruction-bullet {
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .auto-fire-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(34, 197, 94, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: white;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @media (max-width: 768px) {
+            .game-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .game-stats {
+                justify-content: center;
+            }
+
+            .instructions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Game UI -->
+        <div class="game-ui">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <div class="stat-value score" id="scoreValue">$0</div>
+                        <div class="stat-label">Money</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value level" id="levelValue">1</div>
+                        <div class="stat-label">Wave</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value blocks" id="blocksValue">0</div>
+                        <div class="stat-label">Coins</div>
+                    </div>
+                    <div class="lives-container">
+                        <span style="color: #ef4444; margin-right: 8px;">♥</span>
+                        <div class="life-bar active" id="life1"></div>
+                        <div class="life-bar active" id="life2"></div>
+                        <div class="life-bar active" id="life3"></div>
+                    </div>
+                </div>
+                
+                <div class="game-controls">
+                    <button class="btn btn-pause" id="pauseBtn">
+                        <span id="pauseIcon">⏸</span>
+                        <span id="pauseText">Pause</span>
+                    </button>
+                    <button class="btn btn-restart" id="restartBtn">
+                        <span>🔄</span>
+                        <span>New Game</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+         <div class="game-board-container">
+            <canvas id="gameCanvas" width="1000" height="600"></canvas>
+            <!-- <div class="controls-hint">
+                🎯 Move mouse to aim • A/D or ←/→ to move gun • Auto-firing enabled!
+            </div> -->
+            <div class="auto-fire-indicator">
+                🔥 AUTO-FIRE ACTIVE
+            </div> 
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>🔫 Auto Gun Battle Instructions</h3>
+            <div class="instructions-grid">
+                <div>
+                    <div class="instruction-item">
+                        <span class="instruction-bullet" style="color: #fbbf24;">•</span>
+                        <span>Move your mouse to aim the gun at falling coins</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-bullet" style="color: #fbbf24;">•</span>
+                        <span>Gun fires automatically - no clicking needed!</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-bullet" style="color: #fbbf24;">•</span>
+                        <span>Use A/D keys or arrow keys to move the gun left/right</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="instruction-item">
+                        <span class="instruction-bullet" style="color: #ef4444;">•</span>
+                        <span>Destroy coins before they reach the danger zone</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-bullet" style="color: #ef4444;">•</span>
+                        <span>Each coin that breaches costs you a life</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-bullet" style="color: #34d399;">•</span>
+                        <span>Clear all coins to advance to the next wave</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔫</div>
+            <h2 style="color: #ef4444;">GAME OVER</h2>
+            <p>The coins have breached your defenses!</p>
+            
+            <div class="final-stats">
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #fbbf24;" id="finalScore">$0</div>
+                    <div class="stat-label">Final Money</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #60a5fa;" id="finalLevel">1</div>
+                    <div class="stat-label">Waves Survived</div>
+                </div>
+            </div>
+            
+            <button class="btn btn-restart" onclick="restartGame()">
+                <span>🔄</span>
+                <span>Play Again</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="pauseModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="font-size: 48px; margin-bottom: 16px;">⏸</div>
+            <h2 style="color: #fbbf24;">PAUSED</h2>
+            <p>Take a breather, the coins are waiting...</p>
+            <button class="btn btn-pause" onclick="togglePause()">
+                <span>▶</span>
+                <span>Resume Battle</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            blocks: [],
+            projectiles: [],
+            score: 0,
+            level: 1,
+            lives: 3,
+            gameOver: false,
+            paused: false,
+            gunX: 500, // Gun position (movable)
+            gunAngle: 0,
+            lastShotTime: 0
+        };
+
+        // Game area
+        const gameArea = { width: 1000, height: 600 };
+
+        // Canvas and context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Gun settings
+        const gunY = gameArea.height - 30; // Gun Y position (fixed)
+        const gunSpeed = 8; // Movement speed
+        const fireRate = 100; // Milliseconds between shots (faster auto-fire)
+        let keys = {}; // Track pressed keys
+
+        // Mouse position for aiming
+        let mousePos = { x: gameArea.width / 2, y: gameArea.height / 2 };
+
+        // Utility functions
+        function generateRandomColor() {
+            const goldColors = [
+                '#FFD700', '#FFA500', '#FF8C00', '#DAA520', '#B8860B',
+                '#F4A460', '#DEB887', '#D2691E', '#CD853F', '#BC8F8F'
+            ];
+            return goldColors[Math.floor(Math.random() * goldColors.length)];
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function calculateDistance(x1, y1, x2, y2) {
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        }
+
+        function calculateAngle(x1, y1, x2, y2) {
+            return Math.atan2(y2 - y1, x2 - x1);
+        }
+
+        function checkCollision(projectile, block) {
+            const distX = Math.abs(projectile.x - (block.x + block.width / 2));
+            const distY = Math.abs(projectile.y - (block.y + block.height / 2));
+
+            if (distX > (block.width / 2 + projectile.radius) || distY > (block.height / 2 + projectile.radius)) {
+                return false;
+            }
+
+            if (distX <= (block.width / 2) || distY <= (block.height / 2)) {
+                return true;
+            }
+
+            const cornerDistance = Math.pow(distX - block.width / 2, 2) + Math.pow(distY - block.height / 2, 2);
+            return cornerDistance <= Math.pow(projectile.radius, 2);
+        }
+
+        // Generate wall of coins
+        function generateWall() {
+            const blocks = [];
+            const blockSize = 25; // Size of each coin
+            const blocksPerRow = Math.floor(gameArea.width / blockSize);
+            const rows = getRandomInt(1, 2);
+            
+            for (let row = 0; row < rows; row++) {
+                const blocksInThisRow = getRandomInt(1, Math.min(3, Math.floor(blocksPerRow / 20)));
+                const usedPositions = new Set();
+                
+                for (let i = 0; i < blocksInThisRow; i++) {
+                    let col;
+                    do {
+                        col = getRandomInt(0, blocksPerRow - 1);
+                    } while (usedPositions.has(col));
+                    
+                    usedPositions.add(col);
+                    
+                    blocks.push({
+                        id: `${row}-${col}-${Math.random().toString(36).substr(2, 9)}`,
+                        x: col * blockSize,
+                        y: -blockSize * (rows - row),
+                        width: blockSize,
+                        height: blockSize,
+                        color: generateRandomColor(),
+                        speed: 0.2 + gameState.level * 0.1,
+                        health: 1,
+                        value: getRandomInt(10, 50) // Dollar value
+                    });
+                }
+            }
+            
+            return blocks;
+        }
+
+        // Fire projectile from gun (AUTO-FIRE)
+        function fireProjectile() {
+            const currentTime = Date.now();
+            if (currentTime - gameState.lastShotTime < fireRate) return;
+
+            gameState.gunAngle = calculateAngle(gameState.gunX, gunY, mousePos.x, mousePos.y);
+            
+            const projectile = {
+                id: Math.random().toString(36).substr(2, 9),
+                x: gameState.gunX,
+                y: gunY - 20,
+                velocityX: Math.cos(gameState.gunAngle) * 12,
+                velocityY: Math.sin(gameState.gunAngle) * 12,
+                radius: 4,
+                power: 100
+            };
+
+            gameState.projectiles.push(projectile);
+            gameState.lastShotTime = currentTime;
+        }
+
+        // Update game state
+        function updateGame() {
+            if (gameState.gameOver || gameState.paused) return;
+
+            // Move gun based on keys
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                gameState.gunX = Math.max(50, gameState.gunX - gunSpeed);
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                gameState.gunX = Math.min(gameArea.width - 50, gameState.gunX + gunSpeed);
+            }
+
+            // AUTO-FIRE: Continuously fire projectiles
+            fireProjectile();
+
+            // Move blocks down
+            gameState.blocks.forEach(block => {
+                block.y += block.speed;
+            });
+
+            // Remove blocks that reached danger zone
+            const dangerZone = gameArea.height - 100;
+            const bottomBlocks = gameState.blocks.filter(block => block.y >= dangerZone);
+            if (bottomBlocks.length > 0) {
+                gameState.lives -= 1;
+                gameState.blocks = gameState.blocks.filter(block => block.y < dangerZone);
+            }
+
+            // Move projectiles
+            gameState.projectiles.forEach(proj => {
+                proj.x += proj.velocityX;
+                proj.y += proj.velocityY;
+            });
+
+            // Check collisions
+            const blocksToRemove = new Set();
+            const projectilesToRemove = new Set();
+
+            gameState.projectiles.forEach(proj => {
+                gameState.blocks.forEach(block => {
+                    if (checkCollision(proj, block)) {
+                        blocksToRemove.add(block.id);
+                        projectilesToRemove.add(proj.id);
+                        gameState.score += block.value; // Add coin value
+                    }
+                });
+            });
+
+            // Remove collided blocks and projectiles
+            gameState.blocks = gameState.blocks.filter(block => !blocksToRemove.has(block.id));
+            gameState.projectiles = gameState.projectiles.filter(proj => !projectilesToRemove.has(proj.id));
+
+            // Remove out of bounds projectiles
+            gameState.projectiles = gameState.projectiles.filter(proj => 
+                proj.x >= -50 && proj.x <= gameArea.width + 50 && proj.y >= -50 && proj.y <= gameArea.height + 50
+            );
+
+            // Check game over
+            if (gameState.lives <= 0) {
+                gameState.gameOver = true;
+                showGameOverModal();
+            }
+
+            // Level up
+            if (gameState.blocks.length === 0 && !gameState.gameOver) {
+                gameState.level += 1;
+            }
+
+            updateUI();
+        }
+
+        // Render game
+        function render() {
+            // Clear canvas
+            ctx.clearRect(0, 0, gameArea.width, gameArea.height);
+
+            // Draw background gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, gameArea.height);
+            gradient.addColorStop(0, '#0f0f23');
+            gradient.addColorStop(0.3, '#1a1a2e');
+            gradient.addColorStop(0.7, '#16213e');
+            gradient.addColorStop(1, '#2a2a4a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, gameArea.width, gameArea.height);
+
+            // Draw grid pattern
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= gameArea.width; x += 10) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, gameArea.height - 100);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= gameArea.height - 100; y += 10) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(gameArea.width, y);
+                ctx.stroke();
+            }
+
+            // Draw gun area background
+            const gunGradient = ctx.createLinearGradient(0, gameArea.height - 100, 0, gameArea.height);
+            gunGradient.addColorStop(0, 'rgba(139, 69, 19, 0.2)');
+            gunGradient.addColorStop(1, 'rgba(139, 69, 19, 0.4)');
+            ctx.fillStyle = gunGradient;
+            ctx.fillRect(0, gameArea.height - 100, gameArea.width, 100);
+
+            // Draw coins (enhanced 3D effect)
+            gameState.blocks.forEach(block => {
+                ctx.save();
+                
+                // Coin shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(block.x + block.width/2 + 1, block.y + block.height/2 + 1, 
+                           block.width/2, block.height/2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Main coin body
+                ctx.fillStyle = block.color;
+                ctx.shadowColor = block.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.ellipse(block.x + block.width/2, block.y + block.height/2, 
+                           block.width/2, block.height/2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner highlight
+                const highlightGradient = ctx.createRadialGradient(
+                    block.x + block.width/2 - 2, block.y + block.height/2 - 2, 0,
+                    block.x + block.width/2, block.y + block.height/2, block.width/2
+                );
+                highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                highlightGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.4)');
+                highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
+                ctx.fillStyle = highlightGradient;
+                ctx.beginPath();
+                ctx.ellipse(block.x + block.width/2, block.y + block.height/2, 
+                           block.width/2 - 1, block.height/2 - 1, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Dollar sign
+                ctx.fillStyle = '#8B4513';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('$', block.x + block.width/2, block.y + block.height/2 + 2);
+                
+                // Border
+                ctx.strokeStyle = `${block.color}DD`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(block.x + block.width/2, block.y + block.height/2, 
+                           block.width/2, block.height/2, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+
+            // Draw projectiles (bullets) with enhanced effects
+            gameState.projectiles.forEach(projectile => {
+                ctx.save();
+                
+                // Bullet trail
+                const trailLength = 8;
+                for (let i = 0; i < trailLength; i++) {
+                    const alpha = (trailLength - i) / trailLength * 0.5;
+                    const trailX = projectile.x - projectile.velocityX * i * 0.5;
+                    const trailY = projectile.y - projectile.velocityY * i * 0.5;
+                    
+                    ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(trailX, trailY, projectile.radius * (1 - i * 0.1), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Main bullet
+                ctx.fillStyle = '#FFFF00';
+                ctx.shadowColor = '#FFFF00';
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner core
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, projectile.radius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            });
+
+            // Draw danger zone
+            const time = Date.now() * 0.005;
+            const dangerAlpha = 0.15 + Math.sin(time) * 0.08;
+            ctx.fillStyle = `rgba(255, 0, 0, ${dangerAlpha})`;
+            ctx.fillRect(0, gameArea.height - 100, gameArea.width, 100);
+            
+            // Danger line
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.9 + Math.sin(time * 2) * 0.1})`;
+            ctx.lineWidth = 4;
+            ctx.setLineDash([20, 15]);
+            ctx.lineDashOffset = time * 30;
+            ctx.beginPath();
+            ctx.moveTo(0, gameArea.height - 100);
+            ctx.lineTo(gameArea.width, gameArea.height - 100);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Danger zone text
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.8 + Math.sin(time * 3) * 0.2})`;
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('DANGER ZONE', gameArea.width / 2, gameArea.height - 40);
+
+            // Draw gun
+            drawGun();
+        }
+
+        // Draw gun with enhanced auto-fire effects
+        function drawGun() {
+            ctx.save();
+            
+            // Gun base
+            ctx.translate(gameState.gunX, gunY);
+            ctx.rotate(gameState.gunAngle);
+            
+            // Gun barrel with muzzle flash effect
+            const timeSinceShot = Date.now() - gameState.lastShotTime;
+            const muzzleFlash = timeSinceShot < 50; // Show flash for 50ms after shot
+            
+            if (muzzleFlash) {
+                // Muzzle flash
+                ctx.fillStyle = '#FFFF00';
+                ctx.shadowColor = '#FFFF00';
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(35, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(35, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Gun barrel
+            ctx.fillStyle = '#4A5568';
+            ctx.strokeStyle = '#2D3748';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-5, -3, 40, 6, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Gun body
+            ctx.resetTransform();
+            ctx.translate(gameState.gunX, gunY);
+            
+            ctx.fillStyle = '#2D3748';
+            ctx.strokeStyle = '#1A202C';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-15, -8, 30, 16, 5);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Gun details with auto-fire indicator
+            ctx.fillStyle = '#22C55E'; // Green for auto-fire
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Pulsing auto-fire ring
+            const pulseTime = Date.now() * 0.01;
+            const pulseAlpha = 0.3 + Math.sin(pulseTime) * 0.2;
+            ctx.strokeStyle = `rgba(34, 197, 94, ${pulseAlpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Aim line
+            gameState.gunAngle = calculateAngle(gameState.gunX, gunY, mousePos.x, mousePos.y);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(gameState.gunAngle) * 100, Math.sin(gameState.gunAngle) * 100);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.restore();
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('scoreValue').textContent = '$' + gameState.score.toLocaleString();
+            document.getElementById('levelValue').textContent = gameState.level;
+            document.getElementById('blocksValue').textContent = gameState.blocks.length;
+            
+            // Update lives
+            for (let i = 1; i <= 3; i++) {
+                const lifeElement = document.getElementById(`life${i}`);
+                if (i <= gameState.lives) {
+                    lifeElement.className = 'life-bar active';
+                } else {
+                    lifeElement.className = 'life-bar inactive';
+                }
+            }
+            
+            // Update pause button
+            const pauseBtn = document.getElementById('pauseBtn');
+            const pauseIcon = document.getElementById('pauseIcon');
+            const pauseText = document.getElementById('pauseText');
+            
+            if (gameState.paused) {
+                pauseIcon.textContent = '▶';
+                pauseText.textContent = 'Resume';
+            } else {
+                pauseIcon.textContent = '⏸';
+                pauseText.textContent = 'Pause';
+            }
+            
+            pauseBtn.disabled = gameState.gameOver;
+        }
+
+        // Show modals
+        function showGameOverModal() {
+            document.getElementById('finalScore').textContent = '$' + gameState.score.toLocaleString();
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('gameOverModal').classList.remove('hidden');
+        }
+
+        function showPauseModal() {
+            if (gameState.paused && !gameState.gameOver) {
+                document.getElementById('pauseModal').classList.remove('hidden');
+            } else {
+                document.getElementById('pauseModal').classList.add('hidden');
+            }
+        }
+
+        // Game controls
+        function togglePause() {
+            if (!gameState.gameOver) {
+                gameState.paused = !gameState.paused;
+                showPauseModal();
+                updateUI();
+            }
+        }
+
+        function restartGame() {
+            gameState = {
+                blocks: [],
+                projectiles: [],
+                score: 0,
+                level: 1,
+                lives: 3,
+                gameOver: false,
+                paused: false,
+                gunX: 500,
+                gunAngle: 0,
+                lastShotTime: 0
+            };
+            
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('pauseModal').classList.add('hidden');
+            updateUI();
+        }
+
+        // Event listeners
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        });
+
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Button events
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+        // Wall generation timer
+        let wallTimer = 0;
+        const wallInterval = 12000;
+
+        // Game loop
+        function gameLoop() {
+            updateGame();
+            render();
+            
+            // Generate walls
+            if (!gameState.gameOver && !gameState.paused) {
+                wallTimer += 16;
+                if (wallTimer >= wallInterval - gameState.level * 1000 && gameState.blocks.length < 3) {
+                    gameState.blocks.push(...generateWall());
+                    wallTimer = 0;
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize game
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>
